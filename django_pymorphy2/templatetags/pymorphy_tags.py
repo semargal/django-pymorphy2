@@ -1,74 +1,100 @@
-#coding: utf-8
-from __future__ import unicode_literals, absolute_import
-
 """
-    Создано на основе
+    Based on
     https://github.com/kmike/pymorphy/blob/master/pymorphy/templatetags/pymorphy_tags.py
 
 """
-import re
 
 from django import template
-from django.utils.text import force_text
+from django.utils.safestring import mark_safe
 
-from django_pymorphy2.config import MARKER_OPEN, MARKER_CLOSE
-from django_pymorphy2.shortcuts.forms import get_forms_tuple
-from django_pymorphy2.shortcuts.inflect import inflect_phrase, inflect_collocation_phrase
-from django_pymorphy2.shortcuts.plural import pluralize_phrase
+from django_pymorphy2 import utils
 
 register = template.Library()
-
-markup_re = re.compile('(%s.+?%s)' % (MARKER_OPEN, MARKER_CLOSE), re.U)
-
-
-def _process_marked_phrase(phrase, func, *args, **kwargs):
-    """
-    Обработать фразу. В фразе обрабатываются только куски, заключенные
-    в двойные квадратные скобки (например, "[[лошадь]] Пржевальского").
-    """
-    def process(m):
-        return func(m.group(1)[2:-2], *args, **kwargs)
-
-    return re.sub(markup_re, process, phrase)
-
-
-def _process_unmarked_phrase(phrase, func, *args, **kwargs):
-    """
-    Обработать фразу. В фразе не обрабатываются куски, заключенные
-    в двойные квадратные скобки (например, "лошадь [[Пржевальского]]").
-    """
-    def process(part):
-        if not re.match(markup_re, part):
-            return func(part, *args, **kwargs)
-        return part[2: -2]
-
-    parts = [process(s) for s in re.split(markup_re, phrase)]
-    return ''.join(parts)
 
 
 @register.filter
 def inflect(phrase, forms):
-    if not phrase or not forms:
-        return phrase
-    return _process_unmarked_phrase(force_text(phrase), inflect_phrase, *get_forms_tuple(forms))
+    phrase = utils.inflect(phrase, forms)
+    return mark_safe(phrase)
 
 
 @register.filter
-def inflect_marked(phrase, forms):
-    if not phrase or not forms:
-        return phrase
-    return _process_marked_phrase(force_text(phrase), inflect_phrase, *get_forms_tuple(forms))
+def inflect_marked(phrase, forms=None):
+    phrase = utils.inflect_marked(phrase, forms)
+    return mark_safe(phrase)
 
 
 @register.filter
 def inflect_collocation(phrase, forms):
-    if not phrase or not forms:
-        return phrase
-    return _process_unmarked_phrase(force_text(phrase), inflect_collocation_phrase, *get_forms_tuple(forms))
+    phrase = utils.inflect_collocation(phrase, forms)
+    return mark_safe(phrase)
 
 
 @register.filter
 def plural(phrase, number):
-    if not phrase or not number:
-        return phrase
-    return _process_unmarked_phrase(force_text(phrase), pluralize_phrase, number)
+    phrase = utils.plural(phrase, number)
+    return mark_safe(phrase)
+
+
+@register.tag(name='blockinflectmarked')
+def block_inflect_marked(parser, token):
+    """
+    Analizes Russian and English morphology and converts phrases to the
+    specified forms.
+    Allows to specify the word form in the text inside trans/blocktrans tags.
+    Thereby this info can be changed using translation files.
+    The phrase "покупайте [[рыбу|вн]]" could be changed to
+    "не уходите без [[рыбы|рд]]".
+
+    Template:
+    {% blockinflect %}
+        {% blocktrans %}
+            Buy the {{ product_name }}
+        {% endblocktrans %}
+    {% endblockinflect %}
+
+    Translation files:
+        msgid "Buy the %(product_name)s"
+        msgstr "Не уходите без [[%(product_name)s|рд]]"
+    """
+    nodelist = parser.parse(('endblockinflectmarked',))
+    parser.delete_first_token()
+    return InflectNode(nodelist)
+
+
+class InflectNode(template.Node):
+
+    def __init__(self, nodelist):
+        self.nodelist = nodelist
+
+    def render(self, context):
+        output = self.nodelist.render(context)
+        output = inflect_marked(output)
+        return output
+
+
+@register.tag(name='blockplural')
+def block_plural(parser, token):
+    """
+    Same as plural filter
+    Example:
+        {% blockplural amount %}{% trans "Book" %}{% endblockplural %}
+    """
+    nodelist = parser.parse(('endblockplural',))
+    parser.delete_first_token()
+    tag_name, amount = token.split_contents()
+    return PluralNode(nodelist, amount)
+
+
+class PluralNode(template.Node):
+
+    def __init__(self, nodelist, amount):
+        self.nodelist = nodelist
+        self.amount = template.Variable(amount)
+
+    def render(self, context):
+        output = self.nodelist.render(context)
+        if not output:
+            return output
+
+        return plural(output, self.amount.resolve(context))

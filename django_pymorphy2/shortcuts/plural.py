@@ -1,6 +1,3 @@
-#coding: utf-8
-from __future__ import unicode_literals, absolute_import
-
 import six
 
 from pymorphy2.shapes import restore_capitalization
@@ -13,7 +10,7 @@ __all__ = ['pluralize_word', 'pluralize_phrase']
 
 def pluralize_word(word, number):
     """
-    Согласует слово с числом
+    Pluralize a word according to a given number.
     """
     assert isinstance(number, six.integer_types)
 
@@ -28,6 +25,6 @@ def pluralize_word(word, number):
 
 def pluralize_phrase(phrase, number):
     """
-    Согласует фразу с числом пословно
+    Pluralize a phrase word by word according to a given number.
     """
     return process_phrase(phrase, pluralize_word, *(number,))

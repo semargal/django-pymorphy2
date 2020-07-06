@@ -1,6 +1,4 @@
 #coding: utf-8
-from __future__ import unicode_literals, absolute_import
-
 import warnings
 from django_pymorphy2.shortcuts import tokenizers
 
@@ -9,7 +7,7 @@ __all__ = ['process_phrase']
 
 def process_phrase(phrase, func, forms, *args, **kwargs):
     """
-    Обрабатывает фразу по словам с помощью переданной функции
+    Processes a phrase word by word using a given func.
     """
     words = tokenizers.extract_tokens(phrase)
     result = []
@@ -20,12 +18,7 @@ def process_phrase(phrase, func, forms, *args, **kwargs):
                 continue
             result.append(func(word, forms, *args, **kwargs))
     except Exception as e:
-        """
-        Не уверен, как поступить правильно
-        То ли бросать исключение, то ли просто возвращать исходную фразу
-        Пока выбрал второй вариант
-        """
-        warnings.warn(e.message)
+        warnings.warn(e)
         return phrase
 
     return ''.join(result)

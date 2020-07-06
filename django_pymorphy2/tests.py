@@ -1,6 +1,3 @@
-#coding: utf-8
-from __future__ import unicode_literals, absolute_import
-
 from unittest import TestCase
 from django import template
 from django.utils.translation import ugettext_lazy as _
@@ -74,7 +71,7 @@ class InflectTagTest(PymorphyDjangoTestCase):
         self.assertInflected('Ростов-на-Дону', 'пр', 'Ростове-на-Дону')
 
 
-    # тесты для несклоняемых кусков
+    # These check text is not converted.
     def test_basic_no_inflect(self):
         self.assertInflected('лошадь [[Пржевальского]]', 'дт', 'лошади Пржевальского')
         self.assertInflected('[[Москва]]', 'пр', 'Москва')
@@ -100,12 +97,7 @@ class InflectCollocationTest(PymorphyDjangoTestCase):
         self.assertInflected('бутявка', 'мн,тв', 'бутявками')
         self.assertInflected('Петрович', 'дт,отч', 'Петровичу')
 
-        # Т. к. мы берём в работу только слова в Именительном падеже,
-        # вместо имени Петр (Петров - родительный падеж) обрабатывается фамилия Петров
-        # соответственно форма 'имя' здесь не учитывается
-        # см. аналогичный тест выше в InflectTagTest
         self.assertInflected('Петров', 'пр,имя,ед', 'Петрове')
-        # Но для именительного всё работает как надо
         self.assertInflected('Петры', 'пр,имя,ед', 'Петре')
         self.assertInflected('Петрович', 'пр,отч,мн', 'Петровичах')
 

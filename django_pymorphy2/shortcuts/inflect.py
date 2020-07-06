@@ -1,20 +1,15 @@
-#coding: utf-8
-from __future__ import unicode_literals, absolute_import
-
-from django.template import TemplateSyntaxError
-
 from pymorphy2.shapes import restore_capitalization
 
 from django_pymorphy2.config import morph
 from django_pymorphy2.constants import DONT_INFLECT_FORMS
 from .phrase import process_phrase
 
-__all__ = ['inflect_word', 'inflect_phrase']
+__all__ = ['inflect_word', 'inflect_phrase', 'inflect_collocation_phrase']
 
 
 def inflect_word(word, forms, specifying_forms=None):
     """
-    Склоняет одно слово в переданную форму
+    Converts a word into a given form.
     """
     parsed = morph.parse(word)
 
@@ -22,8 +17,6 @@ def inflect_word(word, forms, specifying_forms=None):
         if p.tag.POS in DONT_INFLECT_FORMS:
             return word
         else:
-            # Нам необходима определенная словоформа. Остальные пропускаем
-
             if isinstance(specifying_forms, set) and specifying_forms not in p.tag:
                 continue
 
@@ -40,7 +33,6 @@ def inflect_word_from_nomn(word, forms, *args, **kwargs):
     forms_cache = []
     for p in parsed:
         if p.tag.POS not in DONT_INFLECT_FORMS:
-            # Нам необходима определенная словоформа. Остальные пропускаем
             if (forms in p.tag and (p.normal_form == p.word or 'NOUN' not in p.tag)):
                 return restore_capitalization(p.word, word)
 
@@ -60,16 +52,13 @@ def inflect_word_from_nomn(word, forms, *args, **kwargs):
 
 def inflect_phrase(phrase, forms, *args, **kwargs):
     """
-    Склоняет фразу в переданную форму пословно
+    Converts a phrase into a given form word by word.
 
-    forms - кортеж, содержащий в себе 2 множества:
-        первое - целевая форма,
-        второе - уточнение, какую словоформу использовать
+        - forms is tuple of 2 sets:
+            the first is a target form,
+            the second is an optional refining of word form
 
         tuple({'gent', 'plur'}, {'Name'})
-
-        второй элемент кортежа указывать не обязательно
-
     """
     return process_phrase(phrase, inflect_word, forms, *args, **kwargs)
 

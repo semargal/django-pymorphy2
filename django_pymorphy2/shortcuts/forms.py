@@ -1,7 +1,4 @@
-#coding: utf-8
-from __future__ import unicode_literals, absolute_import
-
-from django.utils.text import force_text
+from django.utils.encoding import force_str
 from django_pymorphy2.constants import INFLECT_FORMS, SPECIFYING_FORMS
 
 __all__ = ['get_forms_tuple']
@@ -9,14 +6,14 @@ __all__ = ['get_forms_tuple']
 
 def get_forms_tuple(*args):
     """
-    Преобразует строку граммем в кордеж с двумя множествами
-     - множество тегов для склонения
-     - множество тегов для уточнения словоформы
+    Converts a string of grammemes to a tuple of two sets:
+        - set of tags for declension
+        - set of tags for refining the word form
     """
     forms = list()
     specs = list()
     for arg in args:
-        for key in force_text(arg).split(','):
+        for key in force_str(arg).split(','):
             if key in INFLECT_FORMS:
                 forms.append(INFLECT_FORMS[key])
             elif key in SPECIFYING_FORMS:
